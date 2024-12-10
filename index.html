@@ -1,0 +1,61 @@
+<script type="text/javascript">
+    const sendWhatsAppMessage = function(to, body, from, accountSid, authToken) {
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+      const headers = new Headers();
+      headers.set(
+        "Authorization",
+        "Basic " + btoa(`${accountSid}:${authToken}`)
+      );
+      headers.set("Content-Type", "application/x-www-form-urlencoded");
+  
+      const params = new URLSearchParams();
+      params.append("To", `whatsapp:${to}`);
+      params.append("From", `whatsapp:${from}`);
+      params.append("Body", body);
+  
+      fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: params,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.error_message) {
+            console.error("Error sending message:", data.error_message);
+            ThunkableWebviewerExtension.postMessage(
+              JSON.stringify({ type: "error", message: data.error_message })
+            );
+          } else {
+            console.log("Message sent successfully:", data);
+            ThunkableWebviewerExtension.postMessage(
+              JSON.stringify({ type: "success", message: "Message sent!" })
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          ThunkableWebviewerExtension.postMessage(
+            JSON.stringify({ type: "error", message: error.message })
+          );
+        });
+    };
+  
+    // Listen for messages from Thunkable
+    ThunkableWebviewerExtension.receiveMessage(function (message) {
+      try {
+        const msgFromApp = JSON.parse(message);
+        if (msgFromApp.type === "sendWhatsAppMessage") {
+          const { to, body, from, accountSid, authToken } = msgFromApp.info;
+          sendWhatsAppMessage(to, body, from, accountSid, authToken);
+        }
+      } catch (e) {
+        console.error("Failed to parse message:", e);
+      }
+    });
+  
+    // Notify Thunkable that the page is ready
+    ThunkableWebviewerExtension.postMessage(
+      JSON.stringify({ type: "pageLoaded" })
+    );
+  </script>
+  
